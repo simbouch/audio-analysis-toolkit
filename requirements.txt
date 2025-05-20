@@ -1,0 +1,9 @@
+numpy
+librosa
+streamlit
+plotly
+soundfile
+scikit-learn
+matplotlib
+sounddevice
+pyaudio
