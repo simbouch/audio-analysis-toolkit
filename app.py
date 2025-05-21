@@ -338,51 +338,141 @@ elif page == "Complete Analysis":
 elif page == "Sound Classification":
     st.header("Sound Classification with MFCC")
 
+    # Initialize session state variables if they don't exist
+    if 'class_0_features' not in st.session_state:
+        st.session_state.class_0_features = []
+        st.session_state.class_0_files = set()
+
+    if 'class_1_features' not in st.session_state:
+        st.session_state.class_1_features = []
+        st.session_state.class_1_files = set()
+
     st.subheader("Training Data")
     st.write("Upload audio files for training the classifier. You need at least 2 files per class.")
 
-    # Class selection
-    class_label = st.selectbox("Select class for uploaded files", ["Class 0", "Class 1"])
+    # Class tabs
+    class_tab_0, class_tab_1 = st.tabs(["Class 0", "Class 1"])
 
-    # File upload for training
-    uploaded_files = st.file_uploader("Upload audio files for training", type=["wav"], accept_multiple_files=True)
+    # Class 0 tab
+    with class_tab_0:
+        st.write(f"Current Class 0 samples: {len(st.session_state.class_0_features)}")
+        st.write(f"Files: {', '.join(st.session_state.class_0_files) if st.session_state.class_0_files else 'None'}")
 
-    # Initialize or get training data from session state
-    if 'training_data' not in st.session_state:
-        st.session_state.training_data = {'features': [], 'labels': []}
+        # File upload for Class 0
+        uploaded_files_0 = st.file_uploader("Upload audio files for Class 0",
+                                          type=["wav"],
+                                          accept_multiple_files=True,
+                                          key="upload_class_0")
 
-    # Add uploaded files to training data
-    if uploaded_files:
-        for uploaded_file in uploaded_files:
-            # Save uploaded file
-            file_path = os.path.join("audio_inputs", uploaded_file.name)
-            with open(file_path, "wb") as f:
-                f.write(uploaded_file.getbuffer())
+        # Add files button for Class 0
+        if uploaded_files_0:
+            if st.button("Add files to Class 0"):
+                added_count = 0
+                for uploaded_file in uploaded_files_0:
+                    if uploaded_file.name not in st.session_state.class_0_files:
+                        # Save uploaded file
+                        file_path = os.path.join("audio_inputs", uploaded_file.name)
+                        with open(file_path, "wb") as f:
+                            f.write(uploaded_file.getbuffer())
 
-            # Load audio data
-            y, sr = load_audio(file_path)
+                        # Load audio data
+                        y, sr = load_audio(file_path)
 
-            # Extract MFCC features
-            features = extract_mfcc_features(y, sr)
+                        # Extract MFCC features
+                        features = extract_mfcc_features(y, sr)
 
-            # Add to training data
-            st.session_state.training_data['features'].append(features)
-            st.session_state.training_data['labels'].append(0 if class_label == "Class 0" else 1)
+                        # Add to Class 0 data
+                        st.session_state.class_0_features.append(features)
+                        st.session_state.class_0_files.add(uploaded_file.name)
+                        added_count += 1
+
+                if added_count > 0:
+                    st.success(f"Added {added_count} files to Class 0")
+                    st.rerun()
+                else:
+                    st.info("These files have already been added to Class 0")
+
+    # Class 1 tab
+    with class_tab_1:
+        st.write(f"Current Class 1 samples: {len(st.session_state.class_1_features)}")
+        st.write(f"Files: {', '.join(st.session_state.class_1_files) if st.session_state.class_1_files else 'None'}")
+
+        # File upload for Class 1
+        uploaded_files_1 = st.file_uploader("Upload audio files for Class 1",
+                                          type=["wav"],
+                                          accept_multiple_files=True,
+                                          key="upload_class_1")
+
+        # Add files button for Class 1
+        if uploaded_files_1:
+            if st.button("Add files to Class 1"):
+                added_count = 0
+                for uploaded_file in uploaded_files_1:
+                    if uploaded_file.name not in st.session_state.class_1_files:
+                        # Save uploaded file
+                        file_path = os.path.join("audio_inputs", uploaded_file.name)
+                        with open(file_path, "wb") as f:
+                            f.write(uploaded_file.getbuffer())
+
+                        # Load audio data
+                        y, sr = load_audio(file_path)
+
+                        # Extract MFCC features
+                        features = extract_mfcc_features(y, sr)
+
+                        # Add to Class 1 data
+                        st.session_state.class_1_features.append(features)
+                        st.session_state.class_1_files.add(uploaded_file.name)
+                        added_count += 1
+
+                if added_count > 0:
+                    st.success(f"Added {added_count} files to Class 1")
+                    st.rerun()
+                else:
+                    st.info("These files have already been added to Class 1")
 
     # Display training data summary
-    if st.session_state.training_data['features']:
-        st.write(f"Training data: {len(st.session_state.training_data['features'])} samples")
-        class_0_count = st.session_state.training_data['labels'].count(0)
-        class_1_count = st.session_state.training_data['labels'].count(1)
-        st.write(f"Class 0: {class_0_count} samples, Class 1: {class_1_count} samples")
+    col1, col2 = st.columns(2)
+
+    with col1:
+        total_samples = len(st.session_state.class_0_features) + len(st.session_state.class_1_features)
+        st.write(f"Total training samples: {total_samples}")
+        st.write(f"Class 0: {len(st.session_state.class_0_features)} samples")
+        st.write(f"Class 1: {len(st.session_state.class_1_features)} samples")
+
+    with col2:
+        # Clear training data button
+        if st.button("Clear all training data"):
+            st.session_state.class_0_features = []
+            st.session_state.class_0_files = set()
+            st.session_state.class_1_features = []
+            st.session_state.class_1_files = set()
+            if 'classifier' in st.session_state:
+                del st.session_state.classifier
+                del st.session_state.scaler
+            st.success("Training data cleared")
+            st.rerun()
 
     # Train classifier
     train_button = st.button("Train Classifier")
 
-    if train_button and len(st.session_state.training_data['features']) >= 2:
+    min_samples_per_class = 2
+    has_enough_samples = (len(st.session_state.class_0_features) >= min_samples_per_class and
+                          len(st.session_state.class_1_features) >= min_samples_per_class)
+
+    if not has_enough_samples and train_button:
+        st.error(f"You need at least {min_samples_per_class} samples for each class to train the classifier.")
+
+    if train_button and has_enough_samples:
+        # Combine features from both classes
+        features = st.session_state.class_0_features + st.session_state.class_1_features
+
+        # Create labels (0 for Class 0, 1 for Class 1)
+        labels = [0] * len(st.session_state.class_0_features) + [1] * len(st.session_state.class_1_features)
+
         # Convert to numpy arrays
-        X = np.array(st.session_state.training_data['features'])
-        y = np.array(st.session_state.training_data['labels'])
+        X = np.array(features)
+        y = np.array(labels)
 
         # Standardize features
         scaler = StandardScaler()
